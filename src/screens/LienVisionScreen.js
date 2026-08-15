@@ -23,6 +23,8 @@ import LiveCounter from '../panels/LiveCounter';
 import BorrowSlider from '../controls/BorrowSlider';
 import CoinDetailSheet from '../controls/CoinDetailSheet';
 import ShareCard from '../panels/ShareCard';
+import OnboardingOverlay from '../panels/OnboardingOverlay';
+import { COIN_COUNT } from '../vault/coinModel';
 
 const { width: WINDOW_W } = Dimensions.get('window');
 const HORIZONTAL_PAD = spacing.lg;
@@ -36,7 +38,10 @@ const LienVisionScreen = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [onboardOpen, setOnboardOpen] = useState(true);
   const shareRef = useRef(null);
+
+  const perCoin = invested / COIN_COUNT;
 
   const lienCount = useMemo(
     () => computeLienCount({ pledgedAmount: pledged, invested }),
@@ -81,16 +86,15 @@ const LienVisionScreen = () => {
               </Text>
             </View>
             <Pressable
-              style={styles.motionToggle}
+              style={styles.demoBtn}
               onPress={() => {
                 Haptics.selectionAsync();
-                setReduceMotion((v) => !v);
+                setOnboardOpen(true);
               }}
               hitSlop={10}
             >
-              <Text style={styles.motionToggleText}>
-                {reduceMotion ? 'Motion off' : 'Motion on'}
-              </Text>
+              <View style={styles.demoBtnDot} />
+              <Text style={styles.demoBtnText}>Show demo</Text>
             </Pressable>
           </View>
 
@@ -103,6 +107,20 @@ const LienVisionScreen = () => {
           </View>
 
           <View style={styles.vaultWrap}>
+            <View style={styles.vaultHeader}>
+              <View>
+                <Text style={styles.vaultHeaderLabel}>YOUR VAULT</Text>
+                <Text style={styles.vaultHeaderValue}>
+                  ₹{invested.toLocaleString('en-IN')}
+                </Text>
+              </View>
+              <View style={styles.vaultHeaderMeta}>
+                <Text style={styles.vaultHeaderMetaLabel}>{COIN_COUNT} coins</Text>
+                <Text style={styles.vaultHeaderMetaSub}>
+                  ~₹{Math.round(perCoin).toLocaleString('en-IN')} each
+                </Text>
+              </View>
+            </View>
             <VaultCanvas
               width={CONTENT_W}
               height={VAULT_HEIGHT}
@@ -113,7 +131,16 @@ const LienVisionScreen = () => {
             />
             <View style={styles.legendRow}>
               <View style={styles.legendItem}>
-                <View style={[styles.legendSwatch, { backgroundColor: colors.coinFree }]} />
+                <View
+                  style={[
+                    styles.legendSwatch,
+                    {
+                      backgroundColor: colors.coinFree,
+                      borderWidth: 1,
+                      borderColor: colors.coinFreeRim,
+                    },
+                  ]}
+                />
                 <Text style={styles.legendText}>Free</Text>
               </View>
               <View style={styles.legendItem}>
@@ -160,6 +187,25 @@ const LienVisionScreen = () => {
           coin={selectedCoin}
           visible={sheetOpen}
           onClose={() => setSheetOpen(false)}
+        />
+
+        <OnboardingOverlay
+          visible={onboardOpen}
+          onDone={() => setOnboardOpen(false)}
+          steps={[
+            {
+              title: 'This is your money.',
+              body: 'Every glowing coin is a real piece of your ₹25,000 investment. 18 coins, worth about ₹1,389 each.',
+            },
+            {
+              title: 'Borrow without selling.',
+              body: 'Drag the borrow slider below the vault. Watch specific coins get a green ring — those are the ones you\'re borrowing against.',
+            },
+            {
+              title: 'They still earn.',
+              body: 'Pledged coins keep glowing, keep drifting, keep growing at 15% p.a. Your money never leaves the market — you just borrowed against its value. Tap any coin to inspect.',
+            },
+          ]}
         />
 
         <Modal
@@ -222,14 +268,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand,
   },
   brand: { ...type.title, fontSize: 16 },
-  motionToggle: {
+  demoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.brand,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.xs + 1,
+    backgroundColor: 'rgba(190, 233, 85, 0.08)',
   },
-  motionToggleText: { ...type.caption, color: colors.textSecondary },
+  demoBtnDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.brand,
+  },
+  demoBtnText: { ...type.caption, color: colors.brand, fontWeight: '600' },
   titleBlock: {
     gap: spacing.sm,
     paddingTop: spacing.sm,
@@ -249,6 +305,35 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   vaultWrap: { gap: spacing.sm },
+  vaultHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingHorizontal: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  vaultHeaderLabel: {
+    ...type.caption,
+    color: colors.textTertiary,
+    letterSpacing: 1.2,
+  },
+  vaultHeaderValue: {
+    ...type.displayMd,
+    fontSize: 22,
+    color: colors.textPrimary,
+  },
+  vaultHeaderMeta: {
+    alignItems: 'flex-end',
+  },
+  vaultHeaderMetaLabel: {
+    ...type.body,
+    color: colors.textPrimary,
+    fontSize: 14,
+  },
+  vaultHeaderMetaSub: {
+    ...type.caption,
+    color: colors.textTertiary,
+  },
   legendRow: {
     flexDirection: 'row',
     alignItems: 'center',
