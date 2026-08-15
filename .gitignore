@@ -39,3 +39,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# private notes
+CLAUDE.md
+AGENTS.md
+.claude/
