@@ -1,12 +1,12 @@
 import React, { useMemo, useEffect, useRef } from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable, Platform } from 'react-native';
 import {
   Canvas,
   Circle,
   Group,
-  Paint,
-  Blur,
   RoundedRect,
+  Text as SkText,
+  matchFont,
 } from '@shopify/react-native-skia';
 import {
   useSharedValue,
@@ -16,6 +16,13 @@ import {
 } from 'react-native-reanimated';
 import { buildCoins, COIN_COUNT } from './coinModel';
 import { colors, radius } from '../theme/tokens';
+
+const RUPEE_FONT = matchFont({
+  fontFamily: Platform.select({ ios: 'Helvetica', default: 'sans-serif' }),
+  fontSize: 22,
+  fontStyle: 'normal',
+  fontWeight: '900',
+});
 
 const AnimatedCoin = ({ coin, time, lienProgress, reduceMotion }) => {
   const cx = useDerivedValue(() => {
@@ -27,41 +34,79 @@ const AnimatedCoin = ({ coin, time, lienProgress, reduceMotion }) => {
     return coin.y + Math.cos(time.value * coin.driftSpeedY + coin.driftSeedY) * coin.driftAmpY;
   });
 
-  const shineAngle = useDerivedValue(
-    () => time.value * coin.spinSpeed + coin.spinPhase
-  );
-  const shineX = useDerivedValue(
-    () => cx.value + Math.cos(shineAngle.value) * (coin.radius * 0.4)
-  );
-  const shineY = useDerivedValue(
-    () => cy.value + Math.sin(shineAngle.value) * (coin.radius * 0.4)
-  );
-
   const ringOpacity = useDerivedValue(() => lienProgress.value);
-  const ringHaloOpacity = useDerivedValue(() => lienProgress.value * 0.4);
+  const ringHaloOpacity = useDerivedValue(() => lienProgress.value * 0.35);
   const ringRadius = useDerivedValue(() => coin.radius + 4 + lienProgress.value * 2);
-  const dimOpacity = useDerivedValue(() => lienProgress.value * 0.35);
-  const glowRadius = coin.radius + 6;
+  const ringHaloRadius = useDerivedValue(() => coin.radius + 9 + lienProgress.value * 2);
+  const dimOpacity = useDerivedValue(() => lienProgress.value * 0.4);
+  const glowRadius = coin.radius + 8;
+
+  const shadowY = useDerivedValue(() => cy.value + 3);
+  const topLightY = useDerivedValue(() => cy.value - coin.radius * 0.5);
+  const topLightY2 = useDerivedValue(() => cy.value - coin.radius * 0.6);
+  const bottomShadowY = useDerivedValue(() => cy.value + coin.radius * 0.45);
+  const rupeeX = useDerivedValue(() => cx.value - 7.5);
+  const rupeeY = useDerivedValue(() => cy.value + 7.5);
 
   return (
     <Group>
-      <Circle cx={cx} cy={cy} r={glowRadius} color={colors.brandGlow} opacity={0.4}>
-        <Paint>
-          <Blur blur={8} />
-        </Paint>
-      </Circle>
+      {/* soft outer glow */}
+      <Circle cx={cx} cy={cy} r={glowRadius + 6} color={colors.coinGlow} opacity={0.1} />
+      <Circle cx={cx} cy={cy} r={glowRadius} color={colors.coinGlow} opacity={0.22} />
 
-      <Circle cx={cx} cy={cy} r={coin.radius} color={colors.coinFreeDark} />
-      <Circle cx={cx} cy={cy} r={coin.radius - 2} color={colors.coinFree} />
+      {/* drop shadow underneath (fake depth) */}
+      <Circle cx={cx} cy={shadowY} r={coin.radius + 1} color="rgba(0,0,0,0.55)" />
 
-      <Circle cx={shineX} cy={shineY} r={coin.radius * 0.32} color="rgba(255,255,255,0.5)">
-        <Paint>
-          <Blur blur={3} />
-        </Paint>
-      </Circle>
+      {/* outer metallic rim (dark bronze) */}
+      <Circle cx={cx} cy={cy} r={coin.radius} color={colors.coinFreeRim} />
+      {/* rim highlight (thin bright ring) */}
+      <Circle
+        cx={cx}
+        cy={cy}
+        r={coin.radius - 1.5}
+        color={colors.coinFreeBright}
+      />
+      {/* recessed face */}
+      <Circle cx={cx} cy={cy} r={coin.radius - 4} color={colors.coinFree} />
 
-      <Circle cx={cx} cy={cy} r={coin.radius} color="rgba(0,0,0,1)" opacity={dimOpacity} />
+      {/* top light gradient — layered semi-transparent white circles offset up */}
+      <Circle
+        cx={cx}
+        cy={topLightY}
+        r={coin.radius * 0.62}
+        color="rgba(255,255,255,0.22)"
+      />
+      <Circle
+        cx={cx}
+        cy={topLightY2}
+        r={coin.radius * 0.38}
+        color="rgba(255,255,255,0.28)"
+      />
 
+
+      {/* ₹ symbol dead-center */}
+      <SkText
+        x={rupeeX}
+        y={rupeeY}
+        text="₹"
+        font={RUPEE_FONT}
+        color={colors.coinInk}
+      />
+
+      {/* dim overlay when pledged */}
+      <Circle cx={cx} cy={cy} r={coin.radius - 0.5} color="#000000" opacity={dimOpacity} />
+
+      {/* pledged ring halo */}
+      <Circle
+        cx={cx}
+        cy={cy}
+        r={ringHaloRadius}
+        color={colors.coinPledgedRing}
+        style="stroke"
+        strokeWidth={2}
+        opacity={ringHaloOpacity}
+      />
+      {/* pledged ring core */}
       <Circle
         cx={cx}
         cy={cy}
@@ -71,19 +116,6 @@ const AnimatedCoin = ({ coin, time, lienProgress, reduceMotion }) => {
         strokeWidth={2.5}
         opacity={ringOpacity}
       />
-      <Circle
-        cx={cx}
-        cy={cy}
-        r={ringRadius}
-        color={colors.coinPledgedRing}
-        style="stroke"
-        strokeWidth={6}
-        opacity={ringHaloOpacity}
-      >
-        <Paint>
-          <Blur blur={6} />
-        </Paint>
-      </Circle>
     </Group>
   );
 };
