@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { colors, radius, spacing, type } from '../theme/tokens';
 
@@ -26,8 +27,10 @@ const CoinGlyph = ({ active }) => (
 );
 
 const TabBar = ({ current, onChange }) => {
+  const insets = useSafeAreaInsets();
+  const bottomOffset = Math.max(insets.bottom, Platform.OS === 'android' ? 24 : 16);
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, { bottom: bottomOffset }]}>
       <View style={styles.bar}>
         {TAB_LIST.map((tab) => {
           const active = current === tab.key;
@@ -57,7 +60,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: spacing.lg,
     right: spacing.lg,
-    bottom: spacing.lg,
   },
   bar: {
     flexDirection: 'row',
